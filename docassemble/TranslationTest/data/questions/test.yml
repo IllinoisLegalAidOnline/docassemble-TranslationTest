@@ -1,0 +1,317 @@
+metadata:
+  title: Translation test
+  short title: Translation test
+  comment:  This program program uses various input and data types to ensure translation coverage.
+  authors:
+    - Matt Newsted
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ILAO:ilao-interview-framework.yml
+  - docassemble.ILAO:shared-basic-questions.yml
+---
+objects:
+  - user: ALIndividual
+---
+# Road map
+sections:
+  - section_intro: Start
+  - section_questions: Questions
+  - section_download: Download
+---
+code: |
+  ilao_easy_form_title = "Translation Test"
+  ilao_easy_form_url = "https://www.illinoislegalaid.org/"
+  form_name = "Test letter"
+
+---
+# interview order block
+mandatory: True
+code: |  
+  nav.set_section('section_intro')
+  sees_nav_bar
+  snapshot_start
+  set_progress(5)
+  how_to_use
+  accept_terms
+  set_progress(20)
+  nav.set_section('section_questions')
+  user.name.first
+  user.address.address
+  user.phone_number
+  user.birthdate
+  old_date
+  whole_number
+  
+  set_progress(80)
+  e_signature
+  set_progress(100)
+  nav.set_section('section_download')
+  forms_assembling
+  snapshot_forms
+  get_docs_screen 
+---
+code: |
+  stuff_to_snapshot = {
+  	'start_time': str(current_datetime().format_datetime()),
+  	'started_interview': True, 
+  	}
+    
+  try:
+    stuff_to_snapshot['ip_address'] = device(ip=True)
+  except:
+    pass  
+    
+  stuff_to_snapshot['user_zip'] = showifdef('user.address.zip')
+
+  stuff_to_snapshot['downloaded_forms'] = showifdef('forms_assembling')
+    
+  store_variables_snapshot(
+  	data=stuff_to_snapshot, persistent=True
+  	)
+  snapshot_interview_state = True
+---
+code: |
+  snapshot_interview_state
+  snapshot_start = True  
+---
+code: |
+  reconsider('snapshot_interview_state')
+  snapshot_forms = True
+---
+id: welcome
+question: |
+  Translation test
+subquestion: |
+  Welcome to Illinois Legal Aid Online's **Translation test** Easy Form.
+
+  This program helps ILAO figure out if our translated Easy Forms work.
+field: sees_nav_bar
+---
+id: instructions
+continue button field: how_to_use
+question: |
+  Instructions
+subquestion: |
+  You can use this program any time.
+  
+  To use this program, you can enter real or made up information.
+
+  Set aside 5 to 10 minutes to finish this program. You can log in and save your work to continue later. 
+
+  At the end of the program, you can download a document.
+  
+  ${ collapse_template(help_example) }  
+
+  Click on **{green words}** to learn what they mean. Some pages have a question mark in a circle ${ fa_icon("question-circle", color_css="#0DCAF0" ) } that helps explain things.
+---
+template: help_example
+subject: |
+  **You can click sections like this to show more information.**
+content: |
+  This is an example of help. Click again to hide.
+---
+id: your contact information
+question: |
+  What is your contact information?
+subquestion: |
+  The court or other parties might need to contact you about this case.
+
+  **This information will appear on your forms.**
+  
+  If you do not want to list a phone number on your forms, leave it blank.
+
+  If you have an email address, you must list it. Be sure to check your email daily, otherwise you may miss important court documents or information about your case.
+
+  ${ collapse_template(contact_info_help) }  
+fields:  
+  - Phone number: user.phone_number
+    datatype: al_international_phone
+    required: False
+  - label: |
+      Do you have an email address?
+    field: user.has_email_address      
+    datatype: yesnoradio
+  - note: |
+      This email address will appear on your court forms. Be sure to check 
+      this email daily, otherwise you may miss important information about 
+      your case.
+    show if:
+      variable: user.has_email_address
+      is: True
+  - Email address: user.email    
+    datatype: email
+    show if: 
+      variable: user.has_email_address
+      is: True
+---
+template: contact_info_help
+subject: |
+  **What if I don't want to list my email address?**
+content: |  
+  If you do not want to enter your personal email address, you can create a new email account to get email about your case.
+  
+  To make a new email account try one of these email services:
+  
+  * [**Gmail**](https://accounts.google.com/SignUp)
+  * [**Outlook**](https://outlook.live.com/owa/?nlp=1&signup=1)
+  * [**Yahoo**](https://login.yahoo.com/account/create?.lang=en-US&.intl=us)
+---
+id: user birthdate
+question: |
+  When were you born?
+fields:
+  - Date of birth: user.birthdate
+    datatype: BirthDate
+    alMin: ${ today().minus(years=100) }
+    alMax: ${ today().format("yyyy-MM-dd") }
+---
+id: numbers
+question: |
+  Enter some numbers
+subquestion: |
+  You got this.
+fields:
+  - Whole number: whole_number
+    datatype: integer
+  - Money: money
+    datatype: currency
+    min: 0
+    max: 19.99
+  - Time: some_time
+    datatype: time
+---
+id: other dates
+question: |
+  How about some other dates?
+fields:
+  - Long ago: old_date
+    datatype: date
+  - Future date: future_date
+    datatype: date
+validation code: |
+  if future_date <= today():
+    validation_error("You must select a date after today.", field="future_date")
+  if old_date > today().minus(years=1):
+    validation_error("You have to go back farther than that.", field="old_date")
+---
+id: e-signature
+question: |
+  Do you want to add your e-signature to your ${ form_name }?
+subquestion: |
+  This program can put "**/s/ ${user.name_full()}**" where you would sign your name. The court will accept this as your signature.
+
+  If you do not add your **{e-signature}** now, you must sign your paper forms before you file and deliver them.
+
+  <div class="alert alert-info ilao-info" role="alert">
+    <h6 class="alert-heading">What it means to sign your forms</h6>
+    <p>By signing the <i>Motion to Modify Child Support</i> and Proof of Delivery section of your forms, you are certifying that:</p>
+    <p><ul>
+      <li>Everything on the forms is true and correct, or you have been informed or believe it to be true and correct, and</li>
+      <li>You understand that making a false statement on the forms is perjury and has penalties provided by law.</li>    </ul></p>
+  <p>See the <a href="https://www.ilga.gov/legislation/ilcs/documents/073500050k1-109.htm"><b>Illinois Code of Civil Procedure, 735 ILCS 5/1-109</b></a> for more information.</p>
+    <p>By signing the <i>Notice of Court Date for Motion</i> forms, you are certifying that:</p>
+    <p><ul>
+      <li>You read the document,</li>
+      <li>You have been informed and believe it is true and correct, and</li>
+      <li>You are not filing it to cause delay or for another bad reason.</li>
+    </ul></p>
+    <p>See the <a href="https://ilcourtsaudio.blob.core.windows.net/antilles-resources/resources/9ce1fce9-895f-463e-b87d-f9b7631f8fde/Rule%20137.pdf"><b>Illinois Supreme Court Rule 137</b></a> for more information.</p>
+  </div>
+fields:
+  - "Add e-signature?": e_signature
+    datatype: yesnoradio
+terms:
+  - "e-signature": |
+      An e-signature is an electronic signature. It is a digital version of a signature that has the same effect as a hand-written signature. 
+---
+id: forms assembling
+continue button field: forms_assembling
+question: |
+  Almost done
+subquestion: |
+  After you click **Next**, it may take a few moments to finish making your forms.
+  
+  ###### You do not need to refresh your screen. Hang in there!
+  
+  [NEWLINE]
+---
+id: get docs screen
+event: get_docs_screen
+question: |
+  Download
+subquestion: |
+  Your letter is ready. View and download your letter and instructions below. Click **Make changes** to fix any mistakes.
+  
+  Read the instructions to learn what to do next.
+
+  Thank you for using ILAO Easy Forms!
+  
+  ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
+
+  ${ al_user_bundle.download_list_html() }
+ 
+  &nbsp;
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+  
+  **Note:** This program does not send your letter. You will need to do this yourself.
+
+  Thank you for using ILAO Easy Forms!
+under: |
+  % if not user_logged_in():
+  [${fa_icon("sign-in-alt", color="#0079d0", size="sm")} Sign-in](${url_of('login', next=interview_url())}) or [create](${url_of('register', next=interview_url())}) an ILAO Easy Form account to save your progress (optional).
+  % endif
+
+ 
+  ${ action_button_html(interview_url(i="docassemble.ILAO:feedback.yml", easy_form_interview=ilao_easy_form_url, easy_form_title=ilao_easy_form_title, easy_form_page=current_context().question_id, easy_form_variable=current_context().variable, local=False,reset=1), label=':comment: Was this program helpful?', color="#181c36", size="md", new_window=True) }
+#buttons:
+  #- Exit: exit
+---
+generic object: ALDocumentBundle
+template: x.send_email_template
+subject: |
+  Translation test
+content: |
+  Your forms are attached.
+  
+  Thanks for using ILAO Easy Forms!
+  
+  [**Illinois Legal Aid Online**](https://www.illinoislegalaid.org)
+---
+attachment:
+  name: letter
+  variable name: letter[i]
+  filename: letter
+  docx template file: letter.docx
+---
+attachment:
+  name: instructions
+  variable name: instructions[i]
+  filename: instructions
+  docx template file: instructions.docx
+---
+objects:
+  - letter: ALDocument.using(title="Letter", filename="letter", enabled=True, has_addendum=False)
+  - instructions: ALDocument.using(title="Instructions", filename="instructions", enabled=True, has_addendum=False)
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, letter], filename="translation_test_forms.pdf", title="All forms")
+
+
+---
+id: review screen
+event: review_answers
+question: |
+  Review screen
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: user.name.first
+    button: |
+      **Your name:**
+      ${user.name_full()}
+  - Edit: user.address.address
+    button: |
+      **Your address:**
+      ${user.address.on_one_line(bare=True)}    
